@@ -1,0 +1,141 @@
+<template>
+  <nu-grid-table
+    name="seller-accounts-table"
+    border shadow radius
+    v-if="account"
+    columns="1fr 8 8 12 12">
+
+    <nu-block role="columnheader" theme="minor" mod="sm w6" padding=".25 .5">
+      {{ $t('manage_accounts.column.marketplaces') }}
+    </nu-block>
+    <nu-block role="columnheader" theme="minor" mod="sm w6 center" padding=".25 .5">
+      {{ $t('manage_accounts.column.products') }}
+    </nu-block>
+    <nu-block role="columnheader" theme="minor" mod="sm w6 center" padding=".25 .5">
+      {{ $t('manage_accounts.column.currency') }}
+    </nu-block>
+    <nu-block role="columnheader" theme="minor" mod="sm w6 center" padding=".25 .5">
+      {{ $t('manage_accounts.column.data') }}
+    </nu-block>
+    <nu-block role="columnheader" theme="minor" mod="sm w6 center" padding=".25 .5">
+      {{ $t('manage_accounts.column.status') }}
+    </nu-block>
+
+    <nu-block :key="`${account.id}.marketplace`" content="start stretch" padding="0">
+      <nu-menu :key="`marketplaces:${account.id}`">
+        <nu-menuitem
+          v-for="(marketplace, index) in account.marketplaces"
+          :key="`marketplace:${marketplace.id}`"
+          :border="index ? `1bw top inside` : '0'"
+          :special="active === marketplace.id ? '' : null"
+          @tap="activate(marketplace)"
+          padding=".5 1"
+          content="stretch"
+          :disabled="disabled || account.status === 'disabled' || account.status !== 'active'">
+          {{ marketplace.domain }}
+        </nu-menuitem>
+      </nu-menu>
+    </nu-block>
+
+    <nu-block :key="`${account.id}.products`" padding="0">
+      <nu-flow :key="`marketplaces:${account.id}`">
+        <nu-block
+          v-for="(marketplace, index) in account.marketplaces"
+          :key="`marketplace:${marketplace.id}`"
+          :border="index ? `1bw top inside` : '0'"
+          padding=".5 1"
+          content="stretch"
+          :mod="`w6 center minor ${active === marketplace.id ? 'primary' : ''}`" size="sm md">
+          {{ marketplace.productsCount || 0 }}
+        </nu-block>
+      </nu-flow>
+    </nu-block>
+
+    <nu-block :key="`${account.id}.currency`" padding="0">
+      <nu-flow :key="`marketplaces:${account.id}`">
+        <nu-block
+          v-for="(marketplace, index) in account.marketplaces"
+          :key="`marketplace:${marketplace.id}`"
+          :border="index ? `1bw top inside` : '0'"
+          padding=".5 1"
+          content="stretch"
+          :mod="`w6 center minor ${active === marketplace.id ? 'primary' : ''}`" size="sm md">
+          {{ marketplace.currency }}, {{ marketplace.currencySymbol}}
+        </nu-block>
+      </nu-flow>
+    </nu-block>
+
+    <nu-flow :key="`${account.id}.lastSync`" content="start stretch" gap=".5" mod="center">
+      <nu-block mod="w5" size="xs md">
+        {{ differenceInTimeLong(differenceInDays(new Date(), account.dataStarted)) }}
+      </nu-block>
+      <nu-line></nu-line>
+      <nu-flex gap=".5" mod="xs" place="center">
+        <nu-block mod="minor">{{ $t('label.since') }}</nu-block>
+        <nu-block mod="w5">{{ formatDate(account.dataStarted, 'YYYY-MM-DD') }}</nu-block>
+      </nu-flex>
+    </nu-flow>
+
+    <nu-flow
+      gap=".5"
+      :key="`${account.id}.status`" content="start stretch"
+      mod="center">
+      <nu-block :mod="getStatusTheme(account.status)">
+        {{ account.status ? $t(`manage_accounts.status.${account.status}`) : '–' }}
+      </nu-block>
+      <nu-line></nu-line>
+      <nu-flex mod="xs" content="center space-between" padding="0 .5">
+        <nu-block>{{ $t('manage_accounts.sync_status') }}:</nu-block>
+        <nu-block theme="minor" v-if="account.syncStatus">
+          {{ account.syncStatus }}%
+          <nu-icon name="refresh-cw" mod="rotation" inline></nu-icon>
+        </nu-block>
+        <nu-icon v-else name="check-circle" theme="success" inline></nu-icon>
+      </nu-flex>
+<!--      <nu-flex mod="xs" content="center space-between" padding="0 .5">-->
+<!--        <nu-block>{{ $t('manage_accounts.advertising_data') }}:</nu-block>-->
+<!--        <nu-icon name="check-circle" theme="success" inline></nu-icon>-->
+<!--      </nu-flex>-->
+    </nu-flow>
+  </nu-grid-table>
+</template>
+
+<script>
+import { differenceInDays } from 'date-fns';
+import { formatDate, differenceInTimeLong } from '@/util';
+
+const STATUS_THEMES = {
+  new: 'danger',
+  disabled: 'minor',
+  active: 'success',
+};
+
+export default {
+  name: 'mws-accounts-table',
+  props: {
+    /**
+     * @type {MwsAccount}
+     */
+    account: {},
+    active: String,
+    disabled: Boolean,
+  },
+  methods: {
+    activate(marketplace) {
+      this.$emit('activate', marketplace);
+    },
+    revoke(id) {
+      // this.store.revoke(id);
+    },
+    sync(id) {
+
+    },
+    getStatusTheme(status) {
+      return STATUS_THEMES[status];
+    },
+    formatDate,
+    differenceInTimeLong,
+    differenceInDays,
+  },
+};
+</script>

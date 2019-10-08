@@ -1,0 +1,148 @@
+<template>
+  <nu-grid shadow radius border mod="no-overflow">
+    <nu-pane
+      background="background"
+      padding=".5" column="1 / -1"
+      border="bottom">
+      <nu-heading level="3" size="h3|h6|1 1">{{ $t('dashboard.performance.header') }}</nu-heading>
+      <nu-block>
+        <nu-flex gap=".5" v-if="items.length > perPage">
+          <nu-btn
+            padding=".5"
+            :disabled="!havePrevPage"
+            @tap="prevPage">
+            <nu-icon name="chevron-left" size="1.5"></nu-icon>
+          </nu-btn>
+          <MiSelect
+            :width="$i18n.locale === 'en' ? 8 : 10.5"
+            :options="pageOptions"
+            v-model="page"/>
+          <nu-btn
+            padding=".5"
+            :disabled="!haveNextPage"
+            @tap="nextPage">
+            <nu-icon name="chevron-right" size="1.5"></nu-icon>
+          </nu-btn>
+        </nu-flex>
+      </nu-block>
+    </nu-pane>
+    <nu-grid-table
+      class="product-performance-table"
+      mod="minor"
+      v-if="items.length"
+      :columns="columns">
+
+      <nu-grid
+        role="columnheader" mod="table-sticky-left w6" items="center start"
+        theme="minor">
+        {{ $t(`dashboard.performance.name`) }}
+      </nu-grid>
+
+      <nu-grid
+        v-for="field in fields"
+        :key="`header.${field}`"
+        role="columnheader"
+        items="center"
+        mod="xs center w6"
+        v-html="$t(`dashboard.performance.${field}`)"
+        :theme="schema[field].theme">
+      </nu-grid>
+
+      <template v-for="item in itemsOnPage">
+        <nu-grid
+          :key="`${item.id}.name`"
+          role="rowheader"
+          mod="table-sticky-left" gap=".5" columns="1.5rem 1fr" items="center start"
+          v-tooltip.right="item.name.length > 15 ? item.name : ''"
+          padding="0 0 0 .5">
+          <MiPicture v-if="item.image" width="1.5" height="1.5">
+            <img :src="item.image" :alt="[]">
+          </MiPicture>
+          <nu-block v-if="!item.image"></nu-block>
+          <nu-link
+            v-if="!demo" @tap="$router.push(`/products/${item.id}`)"
+            mod="ellipsis w6" theme="primary">
+            {{ item.name }}
+          </nu-link>
+          <nu-block v-else mod="ellipse w6">
+            {{ item.name }}
+          </nu-block>
+        </nu-grid>
+
+        <nu-block
+          v-for="field in fields"
+          :key="`${item.id}.${field}`"
+          mod="center">
+          {{ formatNumericField(item[field], schema[field]) }}
+        </nu-block>
+      </template>
+
+      <nu-block role="rowheader" mod="table-sticky-left w6" theme="minor">
+        <span>{{ $t(`dashboard.performance.total`) }} (<b>{{ items.length }}</b>)</span>
+      </nu-block>
+
+      <nu-block
+        v-for="field in fields"
+        :key="`total.${field}`"
+        theme="minor"
+        mod="center w6">
+        {{ formatNumericField(getTotal(field), schema[field]) }}
+      </nu-block>
+    </nu-grid-table>
+  </nu-grid>
+</template>
+
+<script>
+import ProductPerformanceSchema from '@/scheme/product-performance.schema';
+import { formatNumeric, formatNumericField } from '@/util';
+import PaginationMixin from '@/mixins/pagination.mixin';
+
+export default {
+  name: 'product-performance-table',
+  mixins: [PaginationMixin()],
+  props: {
+    items: {
+      default: [],
+    },
+    demo: Boolean,
+  },
+  data() {
+    return {
+      schema: ProductPerformanceSchema(),
+    };
+  },
+  methods: {
+    formatNumeric,
+    formatNumericField,
+    getTotal(field) {
+      if (this.schema[field] && this.schema[field].unit === 'percent') {
+        if (this.schema[field].totalFormula) {
+          return this.schema[field].totalFormula(this.totals, this.items);
+        }
+
+        return this.items.reduce((sum, item) => sum + item[field], 0) / this.items.length;
+      }
+
+      return this.items.reduce((sum, item) => sum + item[field], 0);
+    },
+  },
+  computed: {
+    fields() {
+      return Object.keys(this.schema).slice(2);
+    },
+    columns() {
+      return `13 ${this.fields.map(() => '1fr').join(' ')}`;
+    },
+    totals() {
+      return [...this.fields, 'ppcCount', 'ppcSales', 'clicks']
+        .reduce((obj, field) => {
+          if (!this.schema[field] || !this.schema[field].totalFormula) {
+            obj[field] = this.getTotal(field);
+          }
+
+          return obj;
+        }, {});
+    },
+  },
+};
+</script>

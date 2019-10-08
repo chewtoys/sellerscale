@@ -1,0 +1,4 @@
+var render = function () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return (_vm.existingProductsStore)?_c('MiContainer',{attrs:{"narrow":""}},[_c('ConnectWidget'),_c('ExpiredWidget'),_c('StickyHeader',[_c('nu-heading',{attrs:{"size":"h1|||h3"}},[_vm._v("\n      "+_vm._s(_vm.$t('products.header'))+"\n    ")])],1),_c('AddingProductModal',{ref:"addingProductModal"}),_c('nu-block',[_c('nu-flow',{attrs:{"gap":"1"}},[(!_vm.existingProductsStore.items.length)?_c('MiContent',{attrs:{"padding":"1"}},[_c('p',[_c('nu-badge',{directives:[{name:"t",rawName:"v-t",value:('products.no_existing'),expression:"'products.no_existing'"}],attrs:{"theme":"primary"}})],1)]):_vm._e(),(_vm.existingProductsStore.items.length)?_c('ProductsTable',{attrs:{"store":_vm.existingProductsStore,"demo":_vm.isDemo}}):_vm._e()],1)],1)],1):_vm._e()}
+var staticRenderFns = []
+
+export { render, staticRenderFns }

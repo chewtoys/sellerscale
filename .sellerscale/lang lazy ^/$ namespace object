@@ -1,0 +1,33 @@
+var map = {
+	"./en": [
+		"3fab"
+	],
+	"./en.js": [
+		"3fab"
+	],
+	"./ru": [
+		"cdf2"
+	],
+	"./ru.js": [
+		"cdf2"
+	]
+};
+function webpackAsyncContext(req) {
+	var ids = map[req];
+	if(!ids) {
+		return Promise.resolve().then(function() {
+			var e = new Error("Cannot find module '" + req + "'");
+			e.code = 'MODULE_NOT_FOUND';
+			throw e;
+		});
+	}
+	return Promise.all(ids.slice(1).map(__webpack_require__.e)).then(function() {
+		var id = ids[0];
+		return __webpack_require__(id);
+	});
+}
+webpackAsyncContext.keys = function webpackAsyncContextKeys() {
+	return Object.keys(map);
+};
+webpackAsyncContext.id = "5892";
+module.exports = webpackAsyncContext;

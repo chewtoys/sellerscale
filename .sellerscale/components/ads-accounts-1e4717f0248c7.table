@@ -1,0 +1,85 @@
+<template>
+  <nu-grid-table
+    name="seller-accounts-table"
+    border shadow radius
+    v-if="items.length"
+    columns="1fr 10 10 auto">
+
+    <nu-block role="columnheader" theme="minor" mod="sm w6" padding=".25 .5">
+      {{ $t('manage_accounts.column.name') }}
+    </nu-block>
+    <nu-block role="columnheader" theme="minor" mod="sm w6 center" padding=".25 .5">
+      {{ $t('manage_accounts.column.last_sync') }}
+    </nu-block>
+    <nu-block role="columnheader" theme="minor" mod="sm w6 center" padding=".25 .5">
+      {{ $t('manage_accounts.column.status') }}
+    </nu-block>
+    <nu-block role="columnheader" theme="minor" mod="sm w6 center" padding=".25 .5">
+      {{ $t('manage_accounts.column.actions') }}
+    </nu-block>
+
+    <template v-for="account in items">
+      <nu-grid :key="`${account.id}.name`" items="center start" mod="nowrap">
+        {{ account.name || 'Amazon account' }}
+      </nu-grid>
+
+      <nu-grid :key="`${account.id}.lastSync`" items="center">
+        {{ account.dataSynced ? formatDate(account.dataSynced, 'YYYY-MM-DD HH:mm') : '–' }}
+      </nu-grid>
+
+      <nu-grid
+        :key="`${account.id}.status`" items="center"
+        :mod="getStatusTheme(account.status)">
+        {{ account.status ? $t(`settings.status.${account.status}`) : '–' }}
+      </nu-grid>
+
+      <nu-grid :key="`${account.id}.actions`" flow="column" gap=".5" padding=".5">
+<!--        <nu-btn-->
+<!--          @tap="sync(account.id)" special-->
+<!--          mod="xs"-->
+<!--          disabled>-->
+<!--          {{ $t(`actions.sync`) }}-->
+<!--        </nu-btn>-->
+        <nu-btn
+          @tap="revoke(account.id)" theme="danger" special
+          v-tooltip="$t('manage_accounts.delete_tooltip')"
+          mod="xs"
+          disabled>
+          {{ $t(`actions.revoke`) }}
+        </nu-btn>
+      </nu-grid>
+    </template>
+  </nu-grid-table>
+</template>
+
+<script>
+import { formatDate } from '@/util';
+
+const STATUS_THEMES = {
+  in_progress: 'danger',
+  partially_synced: undefined,
+  synced: 'success',
+};
+
+export default {
+  name: 'ads-accounts-table',
+  props: {
+    items: {
+      type: Array,
+      default: null,
+    },
+  },
+  methods: {
+    revoke(id) {
+      // this.store.revoke(id);
+    },
+    sync(id) {
+
+    },
+    getStatusTheme(status) {
+      return STATUS_THEMES[status];
+    },
+    formatDate,
+  },
+};
+</script>

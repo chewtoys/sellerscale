@@ -1,0 +1,6 @@
+var render = function () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return (_vm.fieldSchema)?_c('div',{staticClass:"mi-form-field",style:({
+    width: _vm.widthRem,
+  })},[(_vm.fieldSchema && _vm.fieldSchema.type !== 'numeric' && _vm.fieldSchema.type !== 'currency')?_c('MiInput',{attrs:{"id":_vm.id,"name":_vm.name,"type":_vm.fieldSchema.type,"status":_vm.status,"disabled":_vm.disabled,"placeholder":_vm.placeholderComputed,"autofocus":_vm.autofocus},on:{"blur":_vm.onBlur},model:{value:(_vm.value),callback:function ($$v) {_vm.value=$$v},expression:"value"}}):(_vm.fieldSchema && _vm.fieldSchema.type === 'numeric')?_c('MiInputNumeric',{attrs:{"id":_vm.id,"name":_vm.name,"status":_vm.status,"schema":_vm.fieldSchema,"autofocus":_vm.autofocus},on:{"blur":_vm.onBlur},model:{value:(_vm.value),callback:function ($$v) {_vm.value=$$v},expression:"value"}}):(_vm.fieldSchema && _vm.fieldSchema.type === 'currency')?_c('MiInputCurrency',{attrs:{"id":_vm.id,"name":_vm.name,"status":_vm.status,"schema":_vm.fieldSchema,"autofocus":_vm.autofocus},on:{"blur":_vm.onBlur},model:{value:(_vm.value),callback:function ($$v) {_vm.value=$$v},expression:"value"}}):_vm._e()],1):_vm._e()}
+var staticRenderFns = []
+
+export { render, staticRenderFns }

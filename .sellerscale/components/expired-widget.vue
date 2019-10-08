@@ -1,0 +1,4 @@
+var render = function () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return (_vm.User.profile.subscription.status === 'expired')?_c('nu-flex',{attrs:{"gap":"1","items":"center||start","flow":"row||column","padding":"0 0 1 0"}},[_c('nu-btn',{attrs:{"content":"stretch","items":"stretch","special":"","inline":"","mod":"nowrap"},on:{"tap":function($event){return _vm.$router.push("/subscription")}}},[_vm._v("\n    "+_vm._s(_vm.$t('actions.add_payment'))+"\n    "),_c('nu-icon',{attrs:{"name":"zap","size":"1.5"}})],1),_c('nu-block',{attrs:{"size":"sm","theme":"danger"}},[_vm._v("\n    "+_vm._s(_vm.$t('subscription.expired_warning'))+"\n  ")])],1):_vm._e()}
+var staticRenderFns = []
+
+export { render, staticRenderFns }

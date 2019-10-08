@@ -1,0 +1,13 @@
+var render = function () {var _vm=this;var _h=_vm.$createElement;var _c=_vm._self._c||_h;return _c('div',{directives:[{name:"tooltip",rawName:"v-tooltip",value:(_vm.fullFormattedTime),expression:"fullFormattedTime"}],ref:"root",staticClass:"mi-cell-input",class:{
+    '-dropdown': _vm.isDropdown,
+    '-disabled': _vm.disabled,
+    '-warning': _vm.hasWarning,
+    '-inside': _vm.inside,
+  },attrs:{"title":_vm.name,"tabindex":_vm.inside || _vm.disabled || _vm.isDropdown ? undefined : 0},on:{"keydown":_vm.onRootKeydown,"click":_vm.onClick,"touchstart":_vm.onTouchStart,"dblclick":_vm.transferFocus}},[(_vm.schema.unit !== 'time' && !_vm.disabled && !_vm.isDropdown && _vm.inside)?_c('MiInputNumeric',{ref:"input",attrs:{"cell":"","disabled":!_vm.inside,"schema":_vm.schema,"padding":".75 0"},on:{"keydown":_vm.onRootKeydown,"blur":_vm.onBlur},model:{value:(_vm.currentValue),callback:function ($$v) {_vm.currentValue=$$v},expression:"currentValue"}}):(_vm.isDropdown)?_c('MiDropdown',{staticStyle:{"--color":"var(--nu-minor-color)"},attrs:{"cell":"","plain":"","padding":".75 .5","popupWidth":"26"},scopedSlots:_vm._u([{key:"default",fn:function(ref){
+  var open = ref.open;
+return [_c('nu-grid',{attrs:{"mod":"center"}},[_vm._v(_vm._s(_vm.formattedValue))]),_c('MiDropdownIcon',{staticClass:"dropdown-icon",attrs:{"value":open,"size":"1"}})]}},{key:"content",fn:function(){return [_c('nu-grid',{staticStyle:{"line-height":"1rem"},attrs:{"padding":"1","gap":".5","mod":"sm"}},_vm._l((_vm.objectToList(_vm.product.data.otherFeesList, 0.1)),function(cost){return _c('nu-grid',{key:cost.id,attrs:{"columns":"auto 1fr auto"}},[_c('nu-grid',{directives:[{name:"t",rawName:"v-t",value:(("product.otherFees." + (cost.id))),expression:"`product.otherFees.${cost.id}`"}]}),_c('nu-grid',{staticStyle:{"border-bottom":"var(--nu-pixel) dotted var(--border-color)","margin-bottom":".5em"}}),_c('nu-grid',{attrs:{"mod":"w6"}},[_vm._v("\n            "+_vm._s(_vm.formatNumeric(cost.value, '$', 2))+"\n          ")])],1)}),1)]},proxy:true}])}):_c('span',{staticClass:"mi-cell-input-value",domProps:{"textContent":_vm._s(_vm.formattedValue)}}),(_vm.valueShift && _vm.valueShiftFormatted)?_c('nu-block',{staticClass:"mi-cell-input-shift",class:{
+      '-negative': _vm.valueShift < 0,
+    },attrs:{"mod":"xxs","radius":".5br"},domProps:{"innerHTML":_vm._s(_vm.valueShiftFormatted)}}):_vm._e()],1)}
+var staticRenderFns = []
+
+export { render, staticRenderFns }

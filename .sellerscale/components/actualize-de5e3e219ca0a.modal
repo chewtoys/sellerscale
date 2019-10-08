@@ -1,0 +1,119 @@
+<template>
+  <MiModal
+    ref="root" v-slot="{ reject }"
+    width="34" height="22">
+    <nu-flex flow="column" gap="1" padding="1">
+      <nu-heading level="3">{{ $t('unit.actuals.header') }}</nu-heading>
+      <nu-line></nu-line>
+      <nu-block>
+        {{ $t('unit.actuals.description') }}
+      </nu-block>
+      <nu-flex gap="1" items="center">
+        <nu-block>
+          {{ $t('unit.actuals.period') }}:
+        </nu-block>
+        <nu-btn-group :value="period" @input="setPeriod($event.detail)">
+          <nu-btn
+            v-for="option in options"
+            :key="option"
+            :value="option"
+            :disabled="loading">
+            {{ $tc('label.days', option) }}
+          </nu-btn>
+        </nu-btn-group>
+      </nu-flex>
+      <nu-block mod="danger" v-if="showError">
+        {{ $t('unit.actuals.error') }}
+      </nu-block>
+      <nu-line></nu-line>
+      <nu-pane>
+        <nu-block>
+          <nu-block v-if="loading" mod="primary">
+            <nu-icon name="zap"></nu-icon>
+            {{ $t('label.actualizing') }}
+          </nu-block>
+        </nu-block>
+        <nu-flex gap=".5">
+          <nu-btn
+            special
+            @tap="resolve(period)"
+            :disabled="loading"
+            autofocus>
+            {{ $t('actions.actualize') }}
+          </nu-btn>
+          <nu-btn
+            @tap="reject"
+            :disabled="loading">
+            {{ $t('actions.cancel') }}
+          </nu-btn>
+        </nu-flex>
+      </nu-pane>
+    </nu-flex>
+
+  </MiModal>
+</template>
+
+<script>
+import Logdown from 'logdown';
+import StoreMixin from '@/mixins/store.mixin';
+import API from '@/services/api';
+import Analytics from '@/services/analytics';
+
+const logger = new Logdown('app.actualize.modal');
+
+export default {
+  name: 'actualize-modal',
+  mixins: [
+    StoreMixin({
+      period: 14,
+    }),
+  ],
+  props: {
+    store: {
+      type: Object,
+      default: null,
+    },
+  },
+  data() {
+    return {
+      options: [7, 14, 30],
+      period: 14,
+      showError: false,
+      loading: false,
+      ids: [],
+    };
+  },
+  methods: {
+    open(ids = []) {
+      this.ids = ids;
+      this.loading = false;
+      this.showError = false;
+
+      return this.$refs.root.open();
+    },
+    async resolve() {
+      this.loading = true;
+
+      return API.Products.actualizeAll({
+        ids: this.ids,
+        actualsFor: this.period,
+      }).then(async () => {
+        await this.store.fetch();
+        this.loading = false;
+
+        Analytics.event('unit:set-actuals', { period: this.period });
+
+        return this.$refs.root.resolve();
+      }).catch((e) => {
+        this.loading = false;
+        this.showError = true;
+
+        logger.error(e);
+      });
+    },
+    setPeriod(period) {
+      this.period = Number(period);
+    },
+  },
+};
+</script>

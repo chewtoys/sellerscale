@@ -1,0 +1,185 @@
+<template>
+  <nu-grid-table
+    border shadow radius="1x|||0" space="0|||0 1"
+    :columns="`3 1fr ${!demo ? 'auto' : ''} 6`">
+    <nu-grid
+      theme="costs" mod="w6"
+      role="columnheader"
+      items="center"
+      v-tooltip.right="
+        $t(store.type === 'existing' ? 'tooltip.isHidden' : 'tooltip.deleteProduct')
+      ">
+      <nu-icon
+        :name="store.type === 'existing' ? 'eye' : 'trash-2'"
+        size="1"></nu-icon>
+    </nu-grid>
+    <nu-block
+      mod="xs w6" role="columnheader"
+      theme="costs"
+      v-html="$t('products.name')"></nu-block>
+    <nu-grid
+      v-if="!demo"
+      mod="xs w6" role="columnheader"
+      theme="costs" content="center"
+      v-html="$t('form_field.product.asin')"></nu-grid>
+    <nu-block
+      mod="xs w6 center" role="columnheader" content="center"
+      theme="costs"
+      v-html="$t('products.unitLandedCost')"></nu-block>
+<!--    <nu-block type="header" mod="xs center" content="center">-->
+<!--      Shipping<br/>Cost-->
+<!--    </nu-block>-->
+    <template v-for="product in store.items">
+      <nu-block
+        padding="0"
+        v-if="store.type === 'existing'" :key="`${product.id}:isHidden`">
+        <MiCheckbox
+          cell :value="product.data.isHidden"
+          :disabled="demo"
+          icon="eye-off"
+          @input="onUpdate(product, 'isHidden', $event)" />
+      </nu-block>
+      <nu-block
+        v-if="store.type === 'tracked'" :key="`${product.id}:delete`"
+        :props="{ buttonBackgroundColor: '--background-color' }" padding="0">
+        <nu-btn cell mod="danger" @tap="deleteProduct(product.id)" place="stretch">
+          <nu-icon name="trash-2" size="1"></nu-icon>
+        </nu-btn>
+      </nu-block>
+      <nu-grid
+        :key="`${product.id}:name`" gap=".5" flow="column" content="start"
+        v-tooltip="product.data.name.length > 25 ? product.data.name : ''">
+        <MiPicture v-if="product.data.images.small" width="1.5" height="1.5">
+          <img :src="product.data.images.small" :alt="[]">
+        </MiPicture>
+        <nu-block v-else>
+          <nu-icon name="package" size="1.5" inline theme="minor"></nu-icon>
+        </nu-block>
+        <nu-grid mod="w6">
+          <nu-link
+            v-if="!demo" @tap="$router.push(`/products/${product.id}`)"
+            mod="w6 primary ellipsis">
+            {{ product.data.name || `${$t('label.deleted_product')} ${product.data.asin}` }}
+          </nu-link>
+          <span v-else>
+            {{ product.data.name }}
+          </span>
+        </nu-grid>
+      </nu-grid>
+      <nu-block
+        v-if="!demo"
+        :key="`${product.id}:asin`"
+        color="special"
+        padding="0">
+        <nu-btn
+          cell
+          padding="0 .5"
+          content="center end||center"
+          @tap="openProductPage(User.profile.marketplace, product.data.asin)">
+          <nu-block hidden="false||true">
+            {{ product.data.asin }}
+          </nu-block>
+          <nu-icon name="external-link" inline></nu-icon>
+        </nu-btn>
+      </nu-block>
+      <nu-block
+        padding="0"
+        :key="`${product.id}:unitLandedCost`"
+        content="end"
+        v-tooltip.danger="getTooltip(product, 'productCost')">
+        <MiInputNumeric
+          cell
+          :schema="schema.productCost"
+          :status="getFieldStatus(product, 'productCost')"
+          :value="product.data.productCost"
+          :disabled="demo"
+          @input="onUpdate(product, 'productCost', $event)"/>
+      </nu-block>
+<!--      <nu-grid-->
+<!--        :key="`${product.id}:shippingCost`"-->
+<!--        content="end"-->
+<!--        v-tooltip.top.danger="getTooltip(product, 'shippingCost')">-->
+<!--        <MiInputNumeric-->
+<!--          cell-->
+<!--          :schema="schema.shippingCost"-->
+<!--          :status="getFieldStatus(product, 'shippingCost')"-->
+<!--          :value="product.data.shippingCost"-->
+<!--          :disabled="demo"-->
+<!--          @input="onUpdate(product, 'shippingCost', $event)"/>-->
+<!--      </nu-grid>-->
+    </template>
+  </nu-grid-table>
+</template>
+
+<script>
+/* eslint-disable-next-line no-unused-vars */
+import ProductsStore from '@/stores/products.store';
+import ProductSchema from '@/scheme/product.schema';
+import Actions from '@/services/actions';
+import { openLink, openProductPage } from '@/util';
+import User from '@/services/user';
+import Analytics from '@/services/analytics';
+
+export default {
+  name: 'products-table',
+  props: {
+    /**
+     * @type {ProductsStore}
+     */
+    store: null,
+    /**
+     * @type {Boolean}
+     */
+    demo: Boolean,
+  },
+  data() {
+    return {
+      schema: new ProductSchema(this.store.type),
+      User,
+    };
+  },
+  methods: {
+    getFieldStatus(product, field) {
+      if (product.data.type === 'existing' && !product.data.isHidden && !product.data[field]) {
+        return 'error';
+      }
+
+      return undefined;
+    },
+    getTooltip(product, field) {
+      if (this.getFieldStatus(product, field) === 'error') {
+        return this.$markdown(this.$t('product.no_costs'));
+      }
+
+      return '';
+    },
+    // same method as in unit.table
+    onUpdate(product, field, value) {
+      const currentValue = product.data[field];
+      const productId = product.id;
+
+      Actions.do(
+        `product{id:${product.id}}.${field}`,
+        () => this.store.update(productId, { [field]: value }),
+        () => this.store.update(productId, { [field]: currentValue }),
+      );
+
+      if (field === 'isHidden') {
+        Analytics.event(`product:${value ? 'hide' : 'show'}`);
+      }
+    },
+    deleteProduct(id) {
+      const product = this.store.getById(id);
+      const productData = product.model.getRaw(true);
+
+      Actions.do(
+        `products{id:${id}}.delete`,
+        () => this.store.delete([id]),
+        () => this.store.add(productData).then(() => this.store.cache()),
+      );
+    },
+    openLink,
+    openProductPage,
+  },
+};
+</script>

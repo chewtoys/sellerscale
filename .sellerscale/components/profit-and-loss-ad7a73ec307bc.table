@@ -1,0 +1,258 @@
+<template>
+
+  <nu-grid-table
+    mod="xs minor"
+    columns="minmax(15rem, auto) auto auto minmax(2rem, auto)">
+    <nu-block role="columnheader" theme="costs" mod="xs w6" padding=".25 .5">
+
+    </nu-block>
+    <nu-block role="columnheader" theme="costs" mod="xs w6 center" padding=".25 .5">
+      {{ $t('pnl.monthly') }}
+    </nu-block>
+    <nu-block role="columnheader" theme="costs" mod="xs w6 center" padding=".25 .5">
+      {{ $t('pnl.annual') }}
+    </nu-block>
+    <nu-block role="columnheader" theme="costs" mod="xs w6 center" padding=".25 .5">
+      %
+    </nu-block>
+
+    <nu-block padding=".5 .5 .5 1" mod="w6">
+      {{ $t('pnl.gross_revenue') }}
+    </nu-block>
+    <nu-block mod="right w6 monospace">
+      {{ formatNumeric(grossRevenue, '$', 0) }}
+    </nu-block>
+    <nu-block mod="right w6 monospace">
+      {{ formatNumeric(grossRevenue * 12, '$', 0) }}
+    </nu-block>
+    <nu-block mod="right i w6 monospace">
+      {{ formatNumeric(100, '%', 1) }}
+    </nu-block>
+
+    <nu-grid
+      padding="0"
+      role="row"
+      theme="costs"
+      column="1 / -1"
+      items="stretch">
+      <nu-btn
+        cell mod="w5 spacing uppercase xxs no-border"
+        padding=".25 .5"
+        @tap="showVariableCosts = !showVariableCosts" theme
+        content="center space-between" place="stretch">
+        {{ $t('pnl.variable_costs') }}
+        <MiDropdownIcon :value="showVariableCosts" size="1"></MiDropdownIcon>
+      </nu-btn>
+    </nu-grid>
+
+    <template v-if="showVariableCosts">
+      <nu-block padding=".5 .5 .5 1">{{ $t('pnl.cost_of_goods') }}</nu-block>
+      <nu-block mod="right monospace">
+        {{ formatNumeric(costOfGoods, '$', 0) }}
+      </nu-block>
+      <nu-block mod="right monospace">
+        {{ formatNumeric(costOfGoods * 12, '$', 0) }}
+      </nu-block>
+      <nu-block mod="right i monospace">
+        {{ formatNumeric(costOfGoods / grossRevenue * 100, '%', 1) }}
+      </nu-block>
+
+      <nu-block padding=".5 .5 .5 1">{{ $t('pnl.amazon_fees') }}</nu-block>
+      <nu-block mod="right monospace">
+        {{ formatNumeric(amazonFees, '$', 0) }}
+      </nu-block>
+      <nu-block mod="right monospace">
+        {{ formatNumeric(amazonFees * 12, '$', 0) }}
+      </nu-block>
+      <nu-block mod="right i monospace">
+        {{ formatNumeric(amazonFees / grossRevenue * 100, '%', 1) }}
+      </nu-block>
+
+      <nu-block padding=".5 .5 .5 1">{{ $t('pnl.ppc_cost') }}</nu-block>
+      <nu-block mod="right monospace">
+        {{ formatNumeric(ppcCost, '$', 0) }}
+      </nu-block>
+      <nu-block mod="right monospace">
+        {{ formatNumeric(ppcCost * 12, '$', 0) }}
+      </nu-block>
+      <nu-block mod="right i monospace">
+        {{ formatNumeric(ppcCost / grossRevenue * 100, '%', 1) }}
+      </nu-block>
+
+      <nu-line theme="border"></nu-line>
+    </template>
+
+    <nu-block padding=".5 .5 .5 1" mod="w6">
+      {{ $t('pnl.gross_profit') }}
+    </nu-block>
+    <nu-block mod="right w6 monospace">
+      {{ formatNumeric(grossProfit, '$', 0) }}
+    </nu-block>
+    <nu-block mod="right w6 monospace">
+      {{ formatNumeric(grossProfit * 12, '$', 0) }}
+    </nu-block>
+    <nu-block mod="right i w6 monospace">
+      {{ formatNumeric(grossMargin, '%', 1) }}
+    </nu-block>
+
+    <nu-grid
+      padding="0"
+      column="1 / -1"
+      role="row"
+      theme="costs"
+      items="stretch">
+      <nu-btn
+        padding=".25 .5"
+        cell mod="w5 spacing uppercase xxs no-border"
+        @tap="showOverheadCosts = !showOverheadCosts" theme
+        content="center space-between" place="stretch">
+        {{ $t('pnl.overhead_costs') }}
+        <MiDropdownIcon :value="showOverheadCosts" size="1"></MiDropdownIcon>
+      </nu-btn>
+    </nu-grid>
+
+    <template v-if="showOverheadCosts">
+      <template v-for="expense in expensesList">
+        <nu-block :key="`expense:${expense.id}:name`" padding=".5 .5 .5 1">
+          {{ expense.description }}
+        </nu-block>
+        <nu-block :key="`expense:${expense.id}:amount`" mod="right monospace">
+          {{ formatNumeric(expense.amount, '$', 0) }}
+        </nu-block>
+        <nu-block :key="`expense:${expense.id}:amountAnnual`" mod="right monospace">
+          {{ formatNumeric(expense.amount * 12, '$', 0) }}
+        </nu-block>
+        <nu-block :key="`expense:${expense.id}:empty`" mod="right i monospace">
+          {{ formatNumeric(expense.amount / grossRevenue * 100, '%', 1) }}
+        </nu-block>
+      </template>
+      <nu-grid
+        column="1 / -1" padding=".5 1" flow="column" gap=".5"
+        content="start space-between">
+        <nu-block mod="i" v-if="!expensesList.length">{{ $t('pnl.no_overhead_costs') }}</nu-block>
+        <nu-link @tap="$router.push('/expenses?add=new')" special>
+          <nu-icon name="plus-circle" size="1"></nu-icon>
+          {{ $t('pnl.add_overhead_costs') }}
+        </nu-link>
+      </nu-grid>
+      <nu-line theme="border"></nu-line>
+    </template>
+
+    <nu-block padding=".5 .5 .5 1" mod="w7 uppercase spacing">
+      {{ $t('pnl.net_profit') }}
+      <!--      {{ $t('pnl.ebitda') }}-->
+    </nu-block>
+    <nu-block mod="w6 monospace" items="end">
+      {{ formatNumeric(ebitda, '$', 0) }}
+      <!--      {{ formatNumeric(ebitda, '$', 0) }}-->
+    </nu-block>
+    <nu-block mod="w6 monospace" items="end">
+      {{ formatNumeric(ebitda * 12, '$', 0) }}
+      <!--      {{ formatNumeric(ebitda * 12, '$', 0) }}-->
+    </nu-block>
+    <nu-block mod="i w6 monospace" items="end">
+      {{ formatNumeric(ebitdaMargin, '%', 1) }}
+      <!--      {{ formatNumeric(ebitdaMargin, '%', 0) }}-->
+    </nu-block>
+
+    <!--    <nu-block column="1 / -1" height=".25" padding="0" theme="cell-header"></nu-block>-->
+
+    <!--    <nu-block padding=".5 .5 .5 1" mod="w7 uppercase spacing">-->
+    <!--      {{ $t('pnl.net_profit') }}-->
+    <!--    </nu-block>-->
+    <!--    <nu-block mod="w6" items="end">-->
+    <!--      {{ formatNumeric(netProfit, '$', 0) }}-->
+    <!--    </nu-block>-->
+    <!--    <nu-block mod="w6" items="end">-->
+    <!--      {{ formatNumeric(netProfit * 12, '$', 0) }}-->
+    <!--    </nu-block>-->
+    <!--    <nu-block mod="i" items="end">-->
+    <!--      {{ formatNumeric(netProfitMargin, '%', 0) }}-->
+    <!--    </nu-block>-->
+  </nu-grid-table>
+
+</template>
+
+<script>
+import { formatNumeric } from '@/util';
+import ProductsStore from '@/stores/products.store';
+import ExpensesStore from '@/stores/expenses.store';
+import StoreMixin from '@/mixins/store.mixin';
+
+export default {
+  name: 'profit-and-loss-table',
+  mixins: [StoreMixin({
+    showVariableCosts: false,
+    showOverheadCosts: false,
+  })],
+  props: {
+    products: {
+      type: ProductsStore,
+    },
+    expenses: {
+      type: ExpensesStore,
+    },
+  },
+  computed: {
+    productsList() {
+      return this.products.items
+        .map(product => ({
+          ...product.data,
+        }))
+        .filter(product => !product.isHidden);
+    },
+    expensesList() {
+      return this.expenses.items
+        .map(product => ({ ...product.data }))
+        .filter(expense => expense.recurrence);
+    },
+    grossRevenue() {
+      return this.productsList.reduce((sum, product) => sum + product.revenue, 0);
+    },
+    costOfGoods() {
+      return this.productsList.reduce(
+        (sum, product) => sum + (product.unitLandedCost * product.totalDailyUnitSales), 0,
+      ) * 30;
+    },
+    amazonFees() {
+      return this.productsList.reduce(
+        (sum, product) => sum + (product.amazonFees * product.totalDailyUnitSales || 0), 0,
+      ) * 30;
+    },
+    ppcCost() {
+      return this.productsList.reduce(
+        (sum, product) => sum + (product.ppcCost * product.totalDailyUnitSales || 0), 0,
+      ) * 30;
+    },
+    variableCosts() {
+      return this.costOfGoods + this.amazonFees + this.ppcCost;
+    },
+    grossProfit() {
+      return this.grossRevenue - this.variableCosts;
+    },
+    grossMargin() {
+      return this.grossProfit / this.grossRevenue * 100;
+    },
+    overheadCosts() {
+      return this.expensesList.reduce(
+        (sum, expense) => sum + (expense.recurrence ? expense.amount : 0), 0,
+      );
+    },
+    ebitda() {
+      return this.grossProfit - this.overheadCosts;
+    },
+    ebitdaMargin() {
+      return this.ebitda / this.grossRevenue * 100;
+    },
+    // netProfit() {
+    //   return this.ebitda * (1 - 0.25);
+    // },
+    // netProfitMargin() {
+    //   return this.netProfit / this.ebitda * 100;
+    // },
+  },
+  methods: {
+    formatNumeric,
+  },
+};
+</script>

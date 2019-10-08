@@ -1,0 +1,128 @@
+<template>
+  <MiModal
+    ref="root" v-slot="{ resolve, reject }"
+    width="31" height="22">
+    <nu-grid
+      rows="auto auto 1fr auto auto">
+      <nu-grid padding="1">
+        <nu-heading level="2" v-t="'unit.add_tracked_product'"></nu-heading>
+      </nu-grid>
+      <nu-tablist content="start" padding="0 1" :value="addType" @input="addType = $event.detail">
+        <nu-tab value="asin" disabled>By ASIN</nu-tab>
+        <nu-tab value="manual">Manually</nu-tab>
+      </nu-tablist>
+      <nu-line></nu-line>
+      <MiForm
+        ref="form"
+        :schema="productAsinFormSchema"
+        @validation="onValidation"
+        v-slot="{ $valid, $formData, $pending }"
+        v-show="addType === 'asin'">
+        <nu-grid padding="1">
+          <MiFormLabel name="asin"/>
+          <MiFormInput name="asin" autofocus/>
+          <MiFormError name="asin"/>
+          <nu-grid columns="auto 1fr" items="start" gap="1">
+            <nu-grid v-if="!productData" height="3">
+              {{ $pending ? $t('label.loading') : '&nbsp;' }}
+            </nu-grid>
+            <nu-grid v-if="productData">
+              <MiPicture width="3">
+                <img :src="productData.attributes.smallImage.url" :alt="productData.name"/>
+              </MiPicture>
+            </nu-grid>
+            <nu-grid v-if="productData">
+              {{ productData.name }}
+            </nu-grid>
+          </nu-grid>
+        </nu-grid>
+        <nu-line></nu-line>
+        <nu-grid flow="column" gap=".5" padding=".5 1" content="start">
+          <nu-btn
+            @tap="resolve($formData)" special :disabled="!$valid"
+            v-t="'actions.add_product'"></nu-btn>
+          <nu-btn
+            @tap="reject" v-t="'actions.cancel'"></nu-btn>
+        </nu-grid>
+      </MiForm>
+      <MiForm
+        :schema="productAddingFormSchema" v-slot="{ $valid, $formData }"
+        v-show="addType === 'manual'">
+        <nu-grid padding="1" columns="1fr 1fr 1fr" gap="0 1">
+          <nu-grid column="1 / -1" items="stretch">
+            <MiFormLabel name="name"/>
+            <MiFormInput name="name" autofocus/>
+          </nu-grid>
+          <nu-grid>
+            <MiFormLabel name="salesPrice"/>
+            <MiFormInput name="salesPrice"/>
+          </nu-grid>
+          <nu-grid>
+            <MiFormLabel name="fbaFee"/>
+            <MiFormInput name="fbaFee"/>
+          </nu-grid>
+          <nu-grid>
+            <MiFormLabel name="unitLandedCost"/>
+            <MiFormInput name="unitLandedCost"/>
+          </nu-grid>
+        </nu-grid>
+        <nu-line></nu-line>
+        <nu-grid flow="column" gap=".5" padding=".5 1" content="start">
+          <nu-btn
+            @tap="resolve($formData)" special :disabled="!$valid"
+            v-t="'actions.add_product'"></nu-btn>
+          <nu-btn
+            @tap="reject" v-t="'actions.cancel'"></nu-btn>
+        </nu-grid>
+      </MiForm>
+    </nu-grid>
+
+  </MiModal>
+</template>
+
+<script>
+import ProductAsinFormSchema from '@/scheme/product.asin.form';
+import ProductAddingFormSchema from '@/scheme/product.adding.form';
+import StoreMixin from '@/mixins/store.mixin';
+import ProductStore from '@/stores/product.store';
+import ProductsStore from '@/stores/products.store';
+
+export default {
+  name: 'adding-product-modal',
+  mixins: [StoreMixin({
+    /**
+     * @type {string}
+     */
+    // addType: 'asin',
+    /**
+     * @type {ProductStore}
+     */
+    product: null,
+  })],
+  data() {
+    return {
+      productAddingFormData: {},
+      productAsinFormData: {},
+      productAddingFormSchema: new ProductAddingFormSchema(),
+      productAsinFormSchema: new ProductAsinFormSchema(),
+      productData: null,
+      valid: null,
+      addType: 'manual',
+    };
+  },
+  methods: {
+    open() {
+      return this.$refs.root.open();
+    },
+    async onValidation($v) {
+      if ($v.valid && !$v.pending) {
+        const asin = $v.data.asin;
+
+        this.productData = await ProductsStore.getRawByAsin(asin);
+      } else {
+        this.productData = null;
+      }
+    },
+  },
+};
+</script>

@@ -1,0 +1,803 @@
+<template>
+  <nu-block
+    name="unit-table"
+    shadow border=" |||top bottom" radius="1x|||0" space="0|||0 1"
+    mod="no-overflow" ref="root">
+    <nu-grid-table
+      :id="store.type === 'existing' ? 'existing-products-table' : 'tracked-products-table'"
+      v-if="store.items"
+      :columns="`14rem ${columns}`"
+      padding=".75 0"
+      items="stretch">
+
+      <nu-grid
+        role="colgroup"
+        type="group" mod="swap xs table-sticky-left" theme="empty-group">
+        <FoldingButton
+          :value="isAnyFolded()"
+          @toggle="toggleFolded()"></FoldingButton>
+      </nu-grid>
+
+      <nu-grid
+        type="colgroup" mod="swap xs uppercase spacing w7"
+        v-for="group in schema.groups"
+        :column="`auto / span ${getGroupSize(group)}`"
+        :key="`group:${group.id}`"
+        :theme="group.theme"
+        padding=".5 0"
+        items="center center">
+        <div v-html="$t(`unit.table.group.${group.id}`)"></div>
+        <FoldingButton
+          v-if="isFoldable(group.id)"
+          :value="isAnyFolded(group.id)"
+          @toggle="toggleFolded(group.id)"></FoldingButton>
+      </nu-grid>
+
+      <nu-grid
+        role="columnheader"
+        :columns="sortedVisibleProducts.length ? '3rem 10rem' : undefined"
+        :padding="sortedVisibleProducts.length ? 0 : .5"
+        mod="table-sticky-left">
+        <nu-grid place="center" v-if="sortedVisibleProducts.length">
+          <MiCheckbox :value="getTotalCheckboxValue()" @input="toggleAll" :disabled="demo"/>
+        </nu-grid>
+        <nu-block place="center start">
+          {{ $t(`unit.table.column.allProducts`) }}
+        </nu-block>
+      </nu-grid>
+
+      <template v-for="column in schema.columns">
+        <nu-grid
+          v-if="!column.folded"
+          :key="`column:${column.id}`"
+          mod="xs center w6" role="columnheader"
+          :theme="column.theme"
+          :foldable="column.foldable"
+          :folded="column.folded"
+          items="center"
+          padding=".5 0">
+          <nu-block mod="center" v-html="$t(`unit.table.column.${column.id}`)"></nu-block>
+          <MiInfo
+            v-if="!column.folded && ($te(`tooltip.${column.id}`) || column.schema.formula)"
+            v-tooltip="getTooltip(column.id, column.schema.formula)"
+            :theme="column.theme"
+            :data-tooltip-theme="column.theme"/>
+          <div v-if="column.link && !isAnyFolded(column.group.id)" class="column-link">
+            <nu-icon
+              :name="column.link === 'plus' ? 'plus-circle' : 'pause-circle'"
+              size="1"></nu-icon>
+          </div>
+        </nu-grid>
+      </template>
+
+      <template
+        v-for="product in itemsOnPage">
+        <nu-grid
+          role="rowheader"
+          :key="`${product.id}:name`" flow="column" columns="3rem 1fr" padding="0"
+          mod="table-sticky-left"
+          v-tooltip.right="product.data.name.length > 15 ? product.data.name : ''">
+          <nu-grid place="center">
+            <MiCheckbox
+              :value="isChecked(product)"
+              :disabled="demo"
+              @input="toggle(product, $event)"></MiCheckbox>
+          </nu-grid>
+          <nu-grid id="name-cell" place="stretch" mod="w6 ellipsis" gap=".5" items="center start"
+                   style="position: relative;">
+            <nu-link
+              v-if="!demo"
+              @tap="$router.push(`/products/${product.id}`)"
+              mod="w6" theme="primary">
+              <nu-grid content="stretch" columns="auto 1fr" gap=".5" items="center start">
+                <MiPicture v-if="product.data.images.small" width="1.5" height="1.5">
+                  <img :src="product.data.images.small" :alt="[]">
+                </MiPicture>
+                <nu-block v-else>
+                  <nu-icon name="package" size="1.5" inline theme="minor"></nu-icon>
+                </nu-block>
+                <nu-block mod="ellipsis" padding="var(--nu-cell-padding)">
+                  {{ product.data.name || product.data.asin }}
+                </nu-block>
+              </nu-grid>
+            </nu-link>
+            <span v-else>
+              <nu-grid content="stretch" columns="auto 1fr" gap=".5" items="center start">
+                <MiPicture v-if="product.data.images.small" width="1.5" height="1.5">
+                  <img :src="product.data.images.small" :alt="[]">
+                </MiPicture>
+                <nu-block mod="ellipsis" padding="var(--nu-cell-padding)" grow="1">
+                  {{ product.data.name }}
+                </nu-block>
+              </nu-grid>
+            </span>
+            <nu-block
+              v-if="!demo"
+              class="asin"
+              size=".5 .5" mod="uppercase" color="minor"
+              opacity="0 #name-cell:hover[1]" transition="opacity">
+              {{ product.data.asin }}
+              {{ getParentAsin(product) ? `/ ${getParentAsin(product)}` : '' }}
+            </nu-block>
+          </nu-grid>
+        </nu-grid>
+
+        <!--        :foldable="column.foldable"-->
+        <!--        :folded="column.folded"-->
+        <template v-for="column in schema.columns">
+          <nu-block
+            :name="column.id"
+            padding="0"
+            v-if="!column.folded"
+            :key="`${product.id}:${column.id}`"
+            :theme="!column.schema.editable ? 'minor' : undefined">
+            <UnitCellInput
+              :value="product.data[column.id]"
+              :product="product"
+              :schema="column.schema"
+              :shift="showShifts && column.shift"
+              :invertShift="column.invertShift"
+              :id="column.id"
+              :disabled="!column.schema.editable || column.folded || demo"
+              @input="onUpdate(product, column.id, $event)"></UnitCellInput>
+          </nu-block>
+        </template>
+      </template>
+    </nu-grid-table>
+
+    <nu-line></nu-line>
+
+    <nu-pane
+      theme="default"
+      background
+      padding=".5">
+      <nu-flex gap=".5" :flow="store.visibleItems.length > perPage ? 'row|||column' : 'row'">
+        <MiDropdown
+          drop="up"
+          ref="actions"
+          :width="$i18n.locale ==='en' ? 8 : 9"
+          sticky="center"
+          :popupWidth="$i18n.locale ==='en' ? 10 : 13"
+          :disabled="demo">
+          {{ $t('actions.header') }}
+          <template v-slot:content>
+            <nu-menu>
+              <nu-grid mod="xs" padding=".5 1" theme="details" background>
+                {{ $t('actions.header') }}:
+              </nu-grid>
+              <nu-menuitem
+                v-if="actions.includes('hide')"
+                @tap="hideSelected"
+                :disabled="!canHide">
+                {{ $t('actions.hide') }}
+              </nu-menuitem>
+              <nu-menuitem
+                v-if="actions.includes('show') && hiddenProducts.length"
+                @tap="showAll"
+                :disabled="!!selected.length">
+                {{ $t('actions.reveal') }} ({{ hiddenProducts.length }})
+              </nu-menuitem>
+              <nu-menuitem
+                v-if="actions.includes('delete')"
+                :disabled="!selected.length"
+                @tap="deleteSelected">
+                {{ $t('actions.delete') }}
+              </nu-menuitem>
+            </nu-menu>
+            <nu-menu>
+              <nu-grid
+                v-if="actions.includes('breakeven')"
+                mod="xs" padding=".5 1" theme="details" background>
+                {{ $t('actions.breakeven') }}:
+              </nu-grid>
+              <nu-menuitem
+                v-if="actions.includes('breakeven')"
+                @tap="setBreakevenPrice()"
+                :disabled="!selected.length">
+                {{ $t('actions.set_price') }}
+              </nu-menuitem>
+              <nu-menuitem
+                v-if="actions.includes('breakeven')"
+                @tap="setBreakevenAcos()"
+                :disabled="!selected.length">
+                {{ $t('actions.set_acos') }}
+              </nu-menuitem>
+            </nu-menu>
+          </template>
+        </MiDropdown>
+        <!--        <MiDropdown-->
+        <!--          v-if="actions.includes('actuals')"-->
+        <!--          basis="min-content"-->
+        <!--          drop="up" ref="actuals"-->
+        <!--          :disabled="demo">-->
+        <!--          {{ $t('actions.set_to_actuals') }}-->
+        <!--          <template v-slot:content>-->
+        <!--            <nu-grid mod="xs" padding=".5 1" theme="details">-->
+        <!--              {{ $t('label.period') }}:-->
+        <!--            </nu-grid>-->
+        <!--            <MiButton-->
+        <!--              type="menuitem"-->
+        <!--              @tap="setToActuals(7)"-->
+        <!--              :disabled="!selected.length">-->
+        <!--              {{ $t('datepicker.presets.last7days') }}-->
+        <!--            </MiButton>-->
+        <!--            <MiButton-->
+        <!--              type="menuitem"-->
+        <!--              @tap="setToActuals(14)"-->
+        <!--              :disabled="!selected.length">-->
+        <!--              {{ $t('datepicker.presets.last14days') }}-->
+        <!--            </MiButton>-->
+        <!--            <MiButton-->
+        <!--              type="menuitem"-->
+        <!--              @tap="setToActuals(30)"-->
+        <!--              :disabled="!selected.length">-->
+        <!--              {{ $t('datepicker.presets.last30days') }}-->
+        <!--            </MiButton>-->
+        <!--          </template>-->
+        <!--        </MiDropdown>-->
+        <MiDropdown
+          drop="up"
+          :width="$i18n.locale ==='en' ? 8 : 9"
+          sticky="center"
+          :popupWidth="$i18n.locale ==='en' ? 10 : 12"
+          ref="sorting"
+          :disabled="demo">
+          {{ $t('sorting.header') }}
+          <template v-slot:content>
+            <nu-menu>
+              <nu-grid
+                mod="xs" padding=".5" theme="details" background>
+                {{ $t('sorting.move') }}:
+              </nu-grid>
+              <nu-menuitem
+                @tap="selectedUp()"
+                :disabled="!selected.length"
+                content="space-between">
+                {{ $t('actions.selected_up') }}
+                <nu-icon name="arrow-up"></nu-icon>
+              </nu-menuitem>
+            </nu-menu>
+<!--            <nu-menu>-->
+<!--              <nu-grid-->
+<!--                mod="xs" padding=".5" theme="details" background>-->
+<!--                {{ $t('sorting.group_by') }}:-->
+<!--              </nu-grid>-->
+<!--              <nu-menuitem-->
+<!--                @tap="groupByParentASIN()"-->
+<!--                content="space-between">-->
+<!--                {{ $t('form_field.product.parentId') }}-->
+<!--                <nu-icon name="list"></nu-icon>-->
+<!--              </nu-menuitem>-->
+<!--            </nu-menu>-->
+            <nu-menu>
+              <nu-grid
+                mod="xs" padding=".5" theme="details" background>
+                {{ $t('sorting.by') }}:
+              </nu-grid>
+              <nu-menuitem
+                @tap="sort('name')"
+                content="space-between">
+                {{ $t('form_field.product.name') }}
+                <nu-icon name="arrow-down"></nu-icon>
+              </nu-menuitem>
+              <nu-menuitem
+                @tap="sort('contribMargin')"
+                content="space-between">
+                {{ $t('form_field.product.contribMargin') }}
+                <nu-icon name="arrow-down"></nu-icon>
+              </nu-menuitem>
+              <nu-menuitem
+                @tap="sort('profit')"
+                content="space-between">
+                {{ $t('form_field.product.profit') }}
+                <nu-icon name="arrow-down"></nu-icon>
+              </nu-menuitem>
+              <nu-menuitem
+                @tap="sort('revenue')"
+                content="space-between">
+                {{ $t('form_field.product.revenue') }}
+                <nu-icon name="arrow-down"></nu-icon>
+              </nu-menuitem>
+            </nu-menu>
+          </template>
+        </MiDropdown>
+      </nu-flex>
+      <nu-flex
+        v-if="store.visibleItems.length > perPage"
+        place="center end" gap=".5">
+        <nu-btn
+          padding=".5"
+          :disabled="!havePrevPage"
+          @tap="prevPage">
+          <nu-icon name="chevron-left" size="1.5"></nu-icon>
+        </nu-btn>
+        <MiSelect
+          :width="$i18n.locale === 'en' ? 8 : 10.5"
+          drop="up"
+          :options="pageOptions"
+          v-model="page"/>
+        <nu-btn
+          padding=".5"
+          :disabled="!haveNextPage"
+          @tap="nextPage">
+          <nu-icon name="chevron-right" size="1.5"></nu-icon>
+        </nu-btn>
+      </nu-flex>
+    </nu-pane>
+  </nu-block>
+</template>
+
+<script>
+import Logdown from 'logdown';
+import StoreMixin from '@/mixins/store.mixin';
+import ProductsStore from '@/stores/products.store';
+import ProductForm from '@/scheme/product.form';
+import { formatNumeric, formatNumericField } from '@/util';
+import scrollBarFix from '@/helpers/scroll-bar-fix';
+import FoldingButton from '@/components/folding-button.vue';
+import UnitCellInput from '@/components/unit-cell-input.vue';
+import Actions from '@/services/actions';
+import formatFormula from '@/helpers/formula';
+import PaginationMixin from '@/mixins/pagination.mixin';
+import Analytics from '@/services/analytics';
+
+scrollBarFix.init('[name="unit-table"] > nu-grid-table');
+
+const productForm = new ProductForm('tracked');
+
+const logger = new Logdown('app.unit-table');
+
+export default {
+  name: 'unit-table',
+  mixins: [StoreMixin({
+    sorting: {
+      existing: [],
+      tracked: [],
+    },
+  }), PaginationMixin('sortedVisibleProducts')],
+  props: {
+    schema: {
+      type: Object,
+      required: true,
+    },
+    /**
+     * @type {ProductsStore}
+     */
+    store: {
+      type: ProductsStore,
+      required: true,
+    },
+    actions: {
+      type: Array,
+      default: () => [],
+    },
+    total: {
+      type: Boolean,
+      default: false,
+    },
+    demo: Boolean,
+  },
+  data() {
+    return {
+      selected: [],
+      actualsForOptions: productForm.fields.actualsFor.options,
+      actualsFor: 7,
+      showShifts: false,
+    };
+  },
+  mounted() {
+    this.enableShifts = this.enableShifts.bind(this);
+    this.disableShifts = this.disableShifts.bind(this);
+
+    document.addEventListener('focus', this.disableShifts, true);
+  },
+  destroyed() {
+    document.removeEventListener('focus', this.disableShifts, true);
+  },
+  watch: {
+    sortedVisibleProducts() {
+      this.recalcPage();
+    },
+  },
+  methods: {
+    enableShifts() {
+      setTimeout(() => {
+        this.showShifts = true;
+      }, 100);
+    },
+    disableShifts() {
+      this.store.resetShift();
+      setTimeout(() => {
+        // hide shift
+        this.showShifts = false;
+      }, 100);
+    },
+    getGroupSize(group) {
+      return group.columns.filter(col => !col.folded).length;
+    },
+    toggleFolded(groupId = null) {
+      this.setFolded(!this.isAnyFolded(groupId), groupId);
+
+      Analytics.event('unit:toggle', { id: groupId || 'all' });
+    },
+    setFolded(folded, groupId = null) {
+      this.schema.columns.forEach((column) => {
+        if ((!groupId || column.group.id === groupId) && column.foldable) {
+          /* eslint-disable-next-line */
+          column.folded = folded;
+        }
+      });
+    },
+    isFoldable(groupId) {
+      return this.schema.columns.find(column => column.group.id === groupId && column.foldable);
+    },
+    isAnyFolded(groupId = null) {
+      return !!this.schema.columns
+        .find(column => (!groupId || column.group.id === groupId) && column.folded);
+    },
+    onUpdate(product, field, value) {
+      const currentValue = product.data[field];
+      const productId = product.id;
+
+      if (currentValue === value) return;
+
+      Actions.do(
+        `product{id:${productId}}.${field}`,
+        () => this.store.update(productId, { [field]: value }),
+        () => this.store.update(productId, { [field]: currentValue }),
+      );
+
+      this.enableShifts();
+    },
+    getTotalCheckboxValue() {
+      if (!this.selected.length) {
+        return false;
+      }
+
+      if (this.selected.length === this.sortedVisibleProducts.length) {
+        return true;
+      }
+
+      return undefined;
+    },
+    toggleAll(checked) {
+      if (checked) {
+        this.selected = [...this.sortedVisibleProducts];
+      } else {
+        this.selected = [];
+      }
+    },
+    isChecked(product) {
+      return this.selected.includes(product);
+    },
+    toggle(product, checked) {
+      if (checked) {
+        this.selected.push(product);
+      } else {
+        this.selected.splice(this.selected.indexOf(product), 1);
+      }
+    },
+    deleteSelected() {
+      const selected = [...this.selected].map(product => product.id);
+      const rawDataList = this.selected.map(product => product.model.getRaw(true));
+
+      Actions.do(
+        `products{id:${selected.join(',')}}.delete`,
+        () => this.store.delete(selected),
+        () => {
+          Promise.all(
+            rawDataList.map(productData => this.store.add(productData)),
+          ).then(() => this.store.cache());
+        },
+      );
+
+      this.selected = [];
+      this.$refs.actions.close();
+    },
+    hideSelected() {
+      const selected = [...this.selected].map(product => product.id);
+
+      Actions.do(
+        `product{id:${selected.join(',')}}.hide`,
+        () => this.store.hide(selected),
+        () => this.store.show(selected),
+      );
+
+      this.selected = [];
+      this.$refs.actions.close();
+    },
+    showAll() {
+      this.store.show(this.hiddenProducts.map(product => product.id));
+
+      this.$refs.actions.close();
+    },
+    // setToActuals(actualsFor) {
+    //   const selected = [...this.selected].map(product => product.id);
+    //   const rawDataList = this.selected.map(product => product.model.getRaw());
+    //
+    //   Actions.do(
+    //     `products{id:${selected.join(',')}}.setActuals(${actualsFor})`,
+    //     () => this.store.setActuals(selected, actualsFor),
+    //     () => {
+    //       Promise.all(rawDataList
+    //         .map(productData => this.store.getById(productData.id).change(productData)))
+    //         .then(() => this.store.cache());
+    //     },
+    //   );
+    //
+    //   this.selected = [];
+    //   this.$refs.actuals.close();
+    //   this.enableShifts();
+    // },
+    setBreakevenPrice() {
+      const selected = [...this.selected].map(product => product.id);
+      const rawDataList = this.selected.map(product => ({
+        salesPrice: product.model.getRaw().salesPrice,
+      }));
+
+      Actions.do(
+        `products{id:${selected.join(',')}}.setBreakevenPrice`,
+        () => this.store.setBreakeventPrice(selected),
+        () => {
+          Promise.all(rawDataList
+            .map((productData, i) => {
+              const product = this.store.getById(selected[i]);
+
+              if (!product) return false;
+
+              return product.change(productData);
+            }))
+            .then(() => this.store.cache());
+        },
+      );
+
+      this.selected = [];
+      this.$refs.actions.close();
+      this.enableShifts();
+
+      Analytics.event('unit:set-breakeven-price');
+    },
+    setBreakevenAcos() {
+      const selected = [...this.selected].map(product => product.id);
+      const rawDataList = this.selected.map(product => ({
+        acos: product.model.getRaw().acos,
+      }));
+
+      Actions.do(
+        `products{id:${selected.join(',')}}.setBreakevenAcos`,
+        () => {
+          this.store.setBreakeventAcos(selected);
+        },
+        () => {
+          Promise.all(rawDataList
+            .map((productData, i) => {
+              const product = this.store.getById(selected[i]);
+
+              if (!product) return false;
+
+              return product.change(productData);
+            }))
+            .then(() => this.store.cache());
+        },
+      );
+
+      this.selected = [];
+      this.$refs.actions.close();
+      this.enableShifts();
+
+      Analytics.event('unit:set-breakeven-acos');
+    },
+    getHeaderCellColor(column) {
+      return column.folded ? 'transparent' : column.color;
+    },
+    getCellColor(column) {
+      if (column.folded) {
+        return 'transparent';
+      }
+
+      return column.schema.editable ? '--color' : '--nu-minor-color';
+    },
+    getTooltip(field, formula) {
+      return `${this.$te(`tooltip.${field}`) ? `<b>${this.$t(`form_field.product.${field}`)}</b> – ${this.$t(`tooltip.${field}`)}` : ''}
+        ${formula ? `${formatFormula(field, formula)}` : ''}`;
+    },
+    selectedUp() {
+      if (this.$refs.sorting) this.$refs.sorting.close();
+
+      const selected = [...this.selected].map(product => product.id);
+      const currentSorting = this.sorting[this.store.type];
+      const newSorting = [
+        ...selected,
+        ...currentSorting.filter(id => !selected.includes(id)),
+      ];
+
+      this.changeSorting(newSorting);
+
+      this.selected = [];
+
+      Analytics.event('unit:selected-up');
+    },
+    changeSorting(newSorting, field) {
+      const prevSorting = [...this.sorting[this.store.type]];
+
+      Actions.do(
+        'products.sorting',
+        () => {
+          this.sorting[this.store.type] = [...newSorting];
+          this.sorting = { ...this.sorting };
+        },
+        () => {
+          this.sorting[this.store.type] = [...prevSorting];
+          this.sorting = { ...this.sorting };
+        },
+      );
+
+      logger.info('sorted by', field || '', this.sorting);
+    },
+    groupByParentASIN() {
+      if (this.$refs.sorting) this.$refs.sorting.close();
+
+      const products = [...this.visibleProducts].map(productStore => productStore.data);
+      const allProducts = [...this.store.items].map(productStore => productStore.data);
+
+      products.sort((a, b) => {
+        a = a.parentId ? allProducts.find(p => p.id === a.parentId) : a;
+        b = b.parentId ? allProducts.find(p => p.id === b.parentId) : b;
+
+        if (!a) return -1;
+        if (!b) return 1;
+
+        const av = a.asin;
+        const bv = b.asin;
+
+        if (av > bv) {
+          return 1;
+        }
+
+        if (bv > av) {
+          return -1;
+        }
+
+        return 0;
+      });
+
+      this.changeSorting(products.map(product => product.id), 'parentId');
+
+      this.resetPage();
+    },
+    sort(field) {
+      if (this.$refs.sorting) this.$refs.sorting.close();
+
+      const products = [...this.visibleProducts].map(productStore => productStore.data);
+
+      products.sort((a, b) => {
+        const av = (a[field] ? a[field] : -999999);
+        const bv = (b[field] ? b[field] : -999999);
+
+        if (av > bv) {
+          return field === 'name' ? 1 : -1;
+        }
+
+        if (bv > av) {
+          return field === 'name' ? -1 : 1;
+        }
+
+        return 0;
+      });
+
+      this.changeSorting(products.map(product => product.id), field);
+
+      Analytics.event('unit:sort', { field });
+
+      this.resetPage();
+    },
+    getParentAsin(product) {
+      if (!product.data.parentId) return null;
+
+      const parent = this.store.items.find(p => p.id === product.data.parentId);
+
+      if (parent) return parent.data.asin;
+
+      return null;
+    },
+    formatNumeric,
+    formatNumericField,
+  },
+  computed: {
+    // allChecked() {
+    //   return false;
+    // },
+    canHide() {
+      return !!(this.selected.length && !this.selected.find(product => product.isHidden));
+    },
+    // canShow() {
+    //   return !!(this.selected.length && !this.selected.find(product => !product.isHidden));
+    // },
+    /**
+     * @returns {Array<ProductStore>}
+     */
+    visibleProducts() {
+      return this.store.items.filter(product => !product.data.isHidden);
+    },
+    /**
+     * @returns {Array<ProductStore>}
+     */
+    sortedVisibleProducts() {
+      const visibleProducts = this.visibleProducts;
+      const products = [];
+
+      if (!this.sorting[this.store.type].length && !this.demo) {
+        this.sort('revenue');
+      }
+
+      this.sorting[this.store.type].forEach((productId) => {
+        const productStore = visibleProducts.find(product => product.id === productId);
+
+        if (productStore) {
+          products.push(productStore);
+        }
+      });
+
+      visibleProducts.forEach((product) => {
+        if (!products.includes(product)) {
+          products.push(product);
+        }
+      });
+
+      return products;
+    },
+    hiddenProducts() {
+      return this.store.items.filter(product => product.data.isHidden);
+    },
+    columns() {
+      return this.schema.columns
+        .filter(col => !col.folded)
+        .map((col) => {
+          if (col.size) {
+            return col.size;
+          }
+
+          return '5rem';
+        }).join(' ');
+    },
+  },
+  components: {
+    FoldingButton,
+    UnitCellInput,
+  },
+};
+</script>
+
+<style scoped>
+.unit-table {
+  border: var(--nu-pixel) solid var(--nu-theme-border-color);
+  border-radius: var(--nu-theme-border-radius);
+  overflow: hidden;
+}
+
+.column-link {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(90deg);
+  border-radius: 50%;
+  overflow: hidden;
+  color: var(--nu-theme-color);
+}
+
+.info-icon {
+  position: absolute;
+  top: var(--nu-pixel);
+  right: var(--nu-pixel);
+  font-weight: 400;
+  border-radius: 50%;
+  max-width: .75rem;
+  max-height: .75rem;
+}
+
+.asin {
+  position: absolute;
+  right: 1px;
+  top: 1px;
+}
+</style>
